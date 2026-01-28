@@ -2,6 +2,9 @@
   "functions": {
     "api/upload.js": {
       "maxDuration": 60
+    },
+    "api/drive-sync.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
