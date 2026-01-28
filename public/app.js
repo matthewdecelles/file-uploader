@@ -40,32 +40,75 @@ async function uploadFile(file) {
   progressFill.classList.remove('done', 'error');
 
   try {
-    const formData = new FormData();
-    formData.append('file', file);
+    let result;
 
-    const result = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 100);
-          progressPercent.textContent = `${pct}%`;
-          progressFill.style.width = `${pct}%`;
-        }
+    if (file.size <= 4 * 1024 * 1024) {
+      // Small files: direct PUT through serverless function
+      result = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            progressPercent.textContent = `${pct}%`;
+            progressFill.style.width = `${pct}%`;
+          }
+        });
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(JSON.parse(xhr.responseText));
+          } else {
+            try { reject(new Error(JSON.parse(xhr.responseText).error)); }
+            catch { reject(new Error(`Upload failed: ${xhr.status}`)); }
+          }
+        });
+        xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+        xhr.open('PUT', '/api/upload');
+        xhr.setRequestHeader('x-filename', file.name);
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.send(file);
       });
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(JSON.parse(xhr.responseText));
-        } else {
-          try { reject(new Error(JSON.parse(xhr.responseText).error)); }
-          catch { reject(new Error(`Upload failed: ${xhr.status}`)); }
-        }
+    } else {
+      // Large files: client upload (browser → Blob directly, bypasses 4.5MB limit)
+      progressPercent.textContent = 'Preparing...';
+      progressFill.style.width = '10%';
+
+      // Step 1: Get upload token
+      const tokenRes = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'blob.generate-client-token',
+          payload: {
+            pathname: file.name,
+            callbackUrl: window.location.origin + '/api/upload',
+          }
+        })
       });
-      xhr.addEventListener('error', () => reject(new Error('Upload failed')));
-      xhr.open('PUT', '/api/upload');
-      xhr.setRequestHeader('x-filename', file.name);
-      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-      xhr.send(file);
-    });
+      if (!tokenRes.ok) {
+        const err = await tokenRes.json().catch(() => ({}));
+        throw new Error(err.error || `Token request failed: ${tokenRes.status}`);
+      }
+      const tokenData = await tokenRes.json();
+
+      // Step 2: Upload directly to Vercel Blob
+      progressPercent.textContent = 'Uploading...';
+      progressFill.style.width = '30%';
+
+      const blobRes = await fetch(`https://blob.vercel-storage.com/${file.name}`, {
+        method: 'PUT',
+        headers: {
+          'authorization': `Bearer ${tokenData.clientToken}`,
+          'x-content-type': file.type || 'application/octet-stream',
+          'x-cache-control-max-age': '31536000',
+        },
+        body: file,
+      });
+
+      if (!blobRes.ok) throw new Error(`Upload failed: ${blobRes.status}`);
+      result = await blobRes.json();
+      progressFill.style.width = '100%';
+      progressPercent.textContent = '100%';
+    }
 
     progressFill.classList.add('done');
     progressPercent.textContent = '✓';
