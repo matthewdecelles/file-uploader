@@ -72,6 +72,20 @@ async function uploadFile(file) {
     showToast(`${file.name} uploaded!`, 'success');
     await loadFiles();
     setTimeout(() => { uploadProgress.hidden = true; }, 2000);
+
+    // Sync to Google Drive in background (fire & forget)
+    fetch('/api/drive-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: result.url,
+        pathname: result.pathname || file.name,
+        contentType: file.type || 'application/octet-stream',
+      }),
+    }).then(r => r.json()).then(d => {
+      if (d.success) console.log('📁 Synced to Google Drive:', d.driveName);
+      else console.warn('Drive sync failed:', d.error);
+    }).catch(e => console.warn('Drive sync error:', e));
   } catch (error) {
     progressFill.classList.add('error');
     progressPercent.textContent = 'Failed';
