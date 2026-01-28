@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📬 Upload to Stanley</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div>
+        <h1>📬 Upload to Stanley</h1>
+        <div class="subtitle">Drop files here. Stanley will find them.</div>
+      </div>
+      <div class="header-actions">
+        <a href="https://stanley-dashboard.vercel.app" target="_blank" class="btn btn-nav">🧠 Command Center</a>
+        <a href="https://kanban-vercel-phi.vercel.app" target="_blank" class="btn btn-nav">📋 Task List</a>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="upload-zone" id="dropZone">
+        <div class="upload-icon">📁</div>
+        <div class="upload-text">Drag & drop files here</div>
+        <div class="upload-subtext">or click to browse</div>
+        <div class="upload-types">PDF, DOC, DOCX, TXT, MD, CSV, XLS, XLSX, Images — up to 60MB</div>
+        <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.txt,.md,.csv,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.svg,.heic" hidden>
+      </div>
+
+      <div id="uploadProgress" class="upload-progress" hidden>
+        <div class="progress-info">
+          <span id="progressFileName" class="progress-name"></span>
+          <span id="progressPercent" class="progress-percent">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <div class="files-section">
+        <div class="files-header">
+          <h2>Uploaded Files</h2>
+          <span class="file-count" id="fileCount">0 files</span>
+        </div>
+        <div id="fileList" class="file-list">
+          <div class="empty-state" id="emptyState">No files yet. Upload something!</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
